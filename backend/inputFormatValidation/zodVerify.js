@@ -5,7 +5,7 @@ const userInputFormatValidation = z.object({
   password: zod.string.min(5, "Password must be at least 5 characters long"),
 });
 
-const courseInputFormatValidation = z.object({
+const todoInputFormatValidation = z.object({
   title: zod.string().min(5, "Title must be at least 5 characters long"),
   description: zod.string.min(
     10,
@@ -13,4 +13,4 @@ const courseInputFormatValidation = z.object({
   ),
 });
 
-module.exports = { userInputFormatValidation, courseInputFormatValidation };
+module.exports = { userInputFormatValidation, todoInputFormatValidation };

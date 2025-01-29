@@ -54,13 +54,9 @@ router.post("/login", async (req, res) => {
     }
     const passwordMatch = await bcrypt.compare(password, existUser.password);
     if (passwordMatch) {
-      const token = jwt.sign(
-        { userId: existUser._id, todosId: existUser.todosId || [] },
-        jwtPassword,
-        {
-          expiresIn: "24h",
-        }
-      );
+      const token = jwt.sign({ userId: existUser._id }, jwtPassword, {
+        expiresIn: "24h",
+      });
       res.status(200).json({ msg: "Login successful", token });
     } else {
       return res.status(401).json({ msg: "Invalid Credentials" });
@@ -73,12 +69,15 @@ router.post("/login", async (req, res) => {
 
 router.get("/getTodos", authenticateUser, async (req, res) => {
   try {
-    if (!req.user || !req.user.todosId || !req.user.todosId.length) {
+    if (!req.user) {
       return res.status(404).json({ msg: "No todos found" });
     }
-    const todos = await todos.find({ _id: { $in: req.user.todosId } });
+    const user = await users.findOne({ _id: req.user.userId });
+
+    const todoss = await todos.find({ _id: { $in: user.todosId } });
+
     res.json({
-      todos,
+      todoss,
     });
   } catch (e) {
     res.status(500).json({ msg: "Failed to fetch todos" });
@@ -144,3 +143,5 @@ router.post("/addTodo", authenticateUser, async (req, res) => {
     res.status(500).json({ msg: "Internal Server Error" });
   }
 });
+
+module.exports = { userRouter: router };

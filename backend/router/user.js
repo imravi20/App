@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const { authenticateUser } = require("../middleware/middleware");
 const {
   userInputFormatValidation,
+  todoInputFormatValidation,
 } = require("../inputFormatValidation/zodVerify");
 const { users, todos } = require("../db/db");
 
@@ -97,6 +98,12 @@ router.get("/getTodosById/:id", authenticateUser, async (req, res) => {
     if (!todo) {
       return res.status(404).json({ msg: "Todo not found" });
     }
+    // Security Check: Ensure the user owns the requested todo
+    if (todo.userId.toString() !== req.user.userId) {
+      return res
+        .status(403)
+        .json({ msg: "Unauthorized: You don't have access to this todo" });
+    }
 
     res.json({ todo });
   } catch (e) {
@@ -105,4 +112,35 @@ router.get("/getTodosById/:id", authenticateUser, async (req, res) => {
   }
 });
 
-router.post("/addTodo", authenticateUser, (req, res) => {});
+router.post("/addTodo", authenticateUser, async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    const inputFormatValidation = todoInputFormatValidation.safeParse({
+      title,
+      description,
+    });
+    if (!inputFormatValidation.success) {
+      return res.status(400).json({ msg: "Input format invalid" });
+    }
+    const todo = await todos.create({
+      title: title,
+      description: description,
+      userId: req.user.userId,
+    });
+    if (todo) {
+      await users.updateOne(
+        { _id: req.user.userId },
+        {
+          $push: {
+            todosId: todo._id,
+          },
+        }
+      );
+      return res.status(201).json({ msg: "todo created" });
+    }
+    res.status(500).json({ msg: "Failed to create todo" });
+  } catch (e) {
+    console.error("Error in /addTodo:", e);
+    res.status(500).json({ msg: "Internal Server Error" });
+  }
+});

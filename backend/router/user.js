@@ -84,6 +84,25 @@ router.get("/getTodos", authenticateUser, async (req, res) => {
   }
 });
 
-router.get("/getTodosById/:id", authenticateUser, (req, res) => {});
+router.get("/getTodosById/:id", authenticateUser, async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    if (!id) {
+      return res.status(400).json({ msg: "Todo ID is required" });
+    }
+
+    const todo = await todos.findOne({ _id: id });
+
+    if (!todo) {
+      return res.status(404).json({ msg: "Todo not found" });
+    }
+
+    res.json({ todo });
+  } catch (e) {
+    console.error("Error fetching todo by ID:", e);
+    res.status(500).json({ msg: "Failed to fetch todo" });
+  }
+});
 
 router.post("/addTodo", authenticateUser, (req, res) => {});

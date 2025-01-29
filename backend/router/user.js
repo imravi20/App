@@ -30,17 +30,41 @@ router.post("/signup", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await users.create({ email, password: hashedPassword });
-    const token = jwt.sign({ userId: user._id }, jwtPassword, {
-      expiresIn: "24h",
-    });
-    res.status(201).json({ token: token });
+    res.status(201).json({ msg: "User created" });
   } catch (e) {
     console.log("signup failed", e);
     res.status(500).json({ msg: "signup failed" });
   }
 });
 
-router.post("/login", authenticateUser, (req, res) => {});
+router.post("/login", authenticateUser, async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const inputFormatValidation = userInputFormatValidation.safeParse({
+      email,
+      password,
+    });
+    if (!inputFormatValidation.success) {
+      return res.status(400).json({ msg: "Input format invalid" });
+    }
+    const existUser = await users.findOne({ email });
+    if (!existUser) {
+      return res.status(401).json({ msg: "Invalid Credentials" });
+    }
+    const passwordMatch = await bcrypt.compare(password, existUser.password);
+    if (passwordMatch) {
+      const token = jwt.sign({ userId: existUser._id }, jwtPassword, {
+        expiresIn: "24h",
+      });
+      res.status(200).json({ msg: "Login successful", token });
+    } else {
+      return res.status(401).json({ msg: "Invalid Credentials" });
+    }
+  } catch (e) {
+    console.log("login failed", e);
+    res.status(500).json({ msg: "login failed" });
+  }
+});
 
 router.get("/getCourses", authenticateUser, (req, res) => {});
 

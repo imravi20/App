@@ -7,7 +7,7 @@ const { authenticateUser } = require("../middleware/middleware");
 const {
   userInputFormatValidation,
 } = require("../inputFormatValidation/zodVerify");
-const { users } = require("../db/db");
+const { users, todos } = require("../db/db");
 
 const router = express.Router();
 
@@ -37,7 +37,7 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-router.post("/login", authenticateUser, async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     const inputFormatValidation = userInputFormatValidation.safeParse({
@@ -53,9 +53,13 @@ router.post("/login", authenticateUser, async (req, res) => {
     }
     const passwordMatch = await bcrypt.compare(password, existUser.password);
     if (passwordMatch) {
-      const token = jwt.sign({ userId: existUser._id }, jwtPassword, {
-        expiresIn: "24h",
-      });
+      const token = jwt.sign(
+        { userId: existUser._id, todosId: existUser.todosId || [] },
+        jwtPassword,
+        {
+          expiresIn: "24h",
+        }
+      );
       res.status(200).json({ msg: "Login successful", token });
     } else {
       return res.status(401).json({ msg: "Invalid Credentials" });
@@ -66,8 +70,20 @@ router.post("/login", authenticateUser, async (req, res) => {
   }
 });
 
-router.get("/getCourses", authenticateUser, (req, res) => {});
+router.get("/getTodos", authenticateUser, async (req, res) => {
+  try {
+    if (!req.user || !req.user.todosId || !req.user.todosId.length) {
+      return res.status(404).json({ msg: "No todos found" });
+    }
+    const todos = await todos.find({ _id: { $in: req.user.todosId } });
+    res.json({
+      todos,
+    });
+  } catch (e) {
+    res.status(500).json({ msg: "Failed to fetch todos" });
+  }
+});
 
-router.get("/getCourseById/:id", authenticateUser, (req, res) => {});
+router.get("/getTodosById/:id", authenticateUser, (req, res) => {});
 
 router.post("/addTodo", authenticateUser, (req, res) => {});
